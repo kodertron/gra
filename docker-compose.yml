@@ -1,0 +1,101 @@
+
+
+services:
+  frontend:
+    build: 
+      context: ./client
+      dockerfile: Dockerfile
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./client:/app
+      - /app/node_modules
+    environment:
+      - NODE_ENV=production
+    networks:
+      - justbros-network
+    depends_on:
+      - nginx
+
+  backend:
+    build: 
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@pgbouncer:6432/justbros
+      - SECRET_KEY=your-secret-key
+    depends_on:
+      - pgbouncer
+    networks:
+      - justbros-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h pgbouncer -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  db:
+    image: postgres:15
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=justbros
+    networks:
+      - justbros-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  pgbouncer:
+    image: edoburu/pgbouncer
+    volumes:
+      - ./pgbouncer.ini:/etc/pgbouncer/pgbouncer.ini
+    environment:
+      - PGBOUNCER_USER=postgres
+      - PGBOUNCER_PASSWORD=postgres
+    ports:
+      - "6432:6432"
+    depends_on:
+      - db
+    networks:
+      - justbros-network
+
+  nginx:
+    build: 
+      context: ./nginx
+      dockerfile: Dockerfile
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/conf.d:/etc/nginx/conf.d
+      - ./nginx/certs:/etc/letsencrypt
+    depends_on:
+      - backend
+    networks:
+      - justbros-network
+
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+    networks:
+      - justbros-network
+
+volumes:
+  postgres_data:
+  grafana_data:
+
+networks:
+  justbros-network:
+    driver: bridge

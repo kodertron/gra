@@ -1,0 +1,48 @@
+services:
+  - type: web
+    name: justbros-frontend
+    buildCommand: docker build -t frontend ./client
+    startCommand: npm run dev
+    env:
+      - key: NODE_ENV
+        value: production
+    ports:
+      - port: 5173
+        protocol: http
+    healthCheck:
+      path: /
+      intervalSeconds: 30
+      timeoutSeconds: 10
+      unhealthyThreshold: 3
+      healthyThreshold: 2
+
+  - type: web
+    name: justbros-backend
+    buildCommand: docker build -t backend ./backend
+    startCommand: uvicorn app.main:app --host=0.0.0.0 --port=$PORT
+    env:
+      - key: DATABASE_URL
+        value: postgresql://postgres:postgres@justbros-db:5432/justbros
+      - key: SECRET_KEY
+        value: your-secret-key
+    ports:
+      - port: 8000
+        protocol: http
+    healthCheck:
+      path: /health
+      intervalSeconds: 30
+      timeoutSeconds: 10
+      unhealthyThreshold: 3
+      healthyThreshold: 2
+
+  - type: database
+    name: justbros-db
+    databaseType: postgresql
+    version: 15
+    env:
+      - key: POSTGRES_USER
+        value: postgres
+      - key: POSTGRES_PASSWORD
+        value: postgres
+      - key: POSTGRES_DB
+        value: justbros
