@@ -13,4 +13,4 @@ COPY . .
 EXPOSE 5173
 
 # Run the development server
-CMD ["yarn", "dev", "--host"]
+CMD ["yarn", "start", "--host"]
