@@ -1,16 +1,15 @@
-FROM node:20-alpine
+# client/Dockerfile
 
+# Step 1: Build stage
+FROM node:20-alpine as build
 WORKDIR /app
-
-# Copy package.json and install dependencies
 COPY package*.json ./
 RUN yarn install
-
-# Copy project files
 COPY . .
+RUN yarn build
 
-# Expose the port Vite runs on
-EXPOSE 5173
-
-# Run the development server
-CMD ["yarn", "start", "--host"]
+# Step 2: Serve with nginx
+FROM nginx:alpine
+COPY --from=build /app/dist /usr/share/nginx/html
+EXPOSE 80
+CMD ["nginx", "-g", "daemon off;"]
